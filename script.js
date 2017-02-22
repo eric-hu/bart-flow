@@ -74,28 +74,13 @@ queue.awaitAll(function(error, jsonData) {
   }, Math.min(Math.random() * 4000, 2500));
 });
 
-
-function massage(line, direction) {  
-  var coordinates = line;
-  
-  // filter ridership data to direction NB or SB
-  if (direction == "north") {
-    // filter ridership data to only trips on a specific line (red, blue, green, etc)
-    var lineRidersBound = riders.filter(isOnLine).filter(isNorthBound);
-    console.log("lineRidersBound North: " + JSON.stringify(lineRidersBound));
+class StationCoordinates {
+  constructor(coordinates) {
+    this.coordinates = coordinates;
   }
-  else if (direction == "south") {
-    var lineRidersBound = riders.filter(isOnLine).filter(isSouthBound);
-  }
-  var trips = [];
-  for (var h = 0; h <24; ++h) {
-    var tripsPerHour = lineRidersBound.filter(tripsHour(h));
-    trips.push(tripsPerHour);
-  }  
-  return trips;
-  //returns trips for all hours on a line
 
-  function isOnLine(t) {
+  isOnLine(t) {
+    let coordinates = this.coordinates;
     // is trip object t's origin  == to any of coordinates's stations?
     for (var i = 0; i < coordinates.length; i++) {
       if (t.origin == coordinates[i].station) {
@@ -108,21 +93,42 @@ function massage(line, direction) {
     }
   }
 
-  function isSouthBound(t) {
+  isSouthBound(t) {
     // assumes coordinate data is always listed north to south
-    return getStationIndex(coordinates, t.origin) < getStationIndex(coordinates, t.dest);
+    return this.getStationIndex(this.coordinates, t.origin) < this.getStationIndex(this.coordinates, t.dest);
   }
 
-  function isNorthBound(t) {
-    return getStationIndex(coordinates, t.origin) > getStationIndex(coordinates, t.dest);
+  isNorthBound(t) {
+    return this.getStationIndex(this.coordinates, t.origin) > this.getStationIndex(this.coordinates, t.dest);
   }
 
-  function getStationIndex(line, station) {
+  getStationIndex(line, station) {
     var i = line.map(function(e) {
       return e.station;
     }).indexOf(station);
     return i;
   }
+}
+
+function massage(line, direction) {  
+  var station = new StationCoordinates(line);
+
+  // filter ridership data to direction NB or SB
+  if (direction == "north") {
+    // filter ridership data to only trips on a specific line (red, blue, green, etc)
+    var lineRidersBound = riders.filter(station.isOnLine, station).filter(station.isNorthBound, station);
+    console.log("lineRidersBound North: " + JSON.stringify(lineRidersBound));
+  }
+  else if (direction == "south") {
+    var lineRidersBound = riders.filter(station.isOnLine, station).filter(station.isSouthBound, station);
+  }
+  var trips = [];
+  for (var h = 0; h <24; ++h) {
+    var tripsPerHour = lineRidersBound.filter(tripsHour(h));
+    trips.push(tripsPerHour);
+  }  
+  return trips;
+  //returns trips for all hours on a line
 
   // filter function to return only trips of a requested hour
   function tripsHour(hour) {
