@@ -74,10 +74,49 @@ queue.awaitAll(function(error, jsonData) {
   }, Math.min(Math.random() * 4000, 2500));
 });
 
+function getStationIndex(line, station) {
+  var i = line.map(function(e) {
+    return e.station;
+  }).indexOf(station);
+  return i;
+}
+
+function generateIsOnLine(coordinates) {
+  return function(t) {
+    for (var i = 0; i < coordinates.length; i++) {
+      if (t.origin == coordinates[i].station) {
+        for (var i = 0; i < coordinates.length; i++) {
+          if (t.dest == coordinates[i].station) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+}
+
+function generateIsSouthBound(coordinates){
+  return function(t) {
+    // assumes coordinate data is always listed north to south
+    return getStationIndex(coordinates, t.origin) < getStationIndex(coordinates, t.dest);
+  }
+}
+
+function generateIsNorthBound(coordinates){
+  return function (t) {
+    return getStationIndex(coordinates, t.origin) > getStationIndex(coordinates, t.dest);
+  }
+}
 
 function massage(line, direction) {  
   var coordinates = line;
-  
+  console.log("~~~~~~~~ COORDINATES ~~~~~~~");
+  console.log(coordinates);
+
+  var isOnLine = generateIsOnLine(coordinates);
+  var isSouthBound = generateIsSouthBound(coordinates);
+  var isNorthBound = generateIsNorthBound(coordinates);
+
   // filter ridership data to direction NB or SB
   if (direction == "north") {
     // filter ridership data to only trips on a specific line (red, blue, green, etc)
@@ -94,35 +133,6 @@ function massage(line, direction) {
   }  
   return trips;
   //returns trips for all hours on a line
-
-  function isOnLine(t) {
-    // is trip object t's origin  == to any of coordinates's stations?
-    for (var i = 0; i < coordinates.length; i++) {
-      if (t.origin == coordinates[i].station) {
-        for (var i = 0; i < coordinates.length; i++) {
-          if (t.dest == coordinates[i].station) {
-            return true;
-          }
-        }
-      }
-    }
-  }
-
-  function isSouthBound(t) {
-    // assumes coordinate data is always listed north to south
-    return getStationIndex(coordinates, t.origin) < getStationIndex(coordinates, t.dest);
-  }
-
-  function isNorthBound(t) {
-    return getStationIndex(coordinates, t.origin) > getStationIndex(coordinates, t.dest);
-  }
-
-  function getStationIndex(line, station) {
-    var i = line.map(function(e) {
-      return e.station;
-    }).indexOf(station);
-    return i;
-  }
 
   // filter function to return only trips of a requested hour
   function tripsHour(hour) {
